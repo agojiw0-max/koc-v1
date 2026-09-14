@@ -1,7 +1,7 @@
 import streamlit as st
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -11,7 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate
 st.set_page_config(page_title="Koç V1", page_icon="⚡", layout="wide")
 st.title("⚡ KOÇ V1 - Elit Atletik Performans & Program Sistemi")
 
-# API Key Yönetimi (Sol Menüden Giriş veya Streamlit Secrets)
+# API Key Yönetimi
 st.sidebar.title("⚙️ Sistem Ayarları")
 api_key = st.sidebar.text_input("Google Gemini API Key:", type="password")
 
@@ -22,18 +22,15 @@ if not api_key:
         st.warning("Lütfen sol menüden Gemini API Key anahtarını gir kral!")
         st.stop()
 
-# PDF Yükleme ve Vektör Veritabanı (ChromaDB)
+# PDF Yükleme ve Vektör Veritabanı
 @st.cache_resource
 def load_vectorstore(key):
-    # PDF Dosyası (GitHub'daki dosya adının kitap.pdf olduğundan emin ol)
     loader = PyPDFLoader("kitap.pdf")
     docs = loader.load()
 
-    # Metin Parçalama (Chunking)
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
     splits = text_splitter.split_documents(docs)
 
-    # Vektör Veritabanı
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=key)
     vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
     return vectorstore.as_retriever(search_kwargs={"k": 4})
@@ -60,7 +57,7 @@ llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=api_key, tem
 question_answer_chain = create_stuff_documents_chain(llm, prompt)
 rag_chain = create_retrieval_chain(retriever, question_answer_chain)
 
-# Chat Arayüzü (Sohbet Geçmişi Desteği)
+# Chat Arayüzü
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
